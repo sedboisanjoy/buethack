@@ -25,11 +25,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Install Order Service dependencies
         working-directory: ./order-service
-        run: npm ci
+        run: npm install
 
       - name: Build Order Service
         working-directory: ./order-service
@@ -37,7 +36,7 @@ jobs:
 
       - name: Install Inventory Service dependencies
         working-directory: ./inventory-service
-        run: npm ci
+        run: npm install
 
       - name: Build Inventory Service
         working-directory: ./inventory-service
@@ -45,7 +44,7 @@ jobs:
 
       - name: Install Dashboard dependencies
         working-directory: ./dashboard
-        run: npm ci
+        run: npm install
 
       - name: Build Dashboard
         working-directory: ./dashboard
@@ -53,7 +52,7 @@ jobs:
 
       - name: Install Frontend dependencies
         working-directory: ./frontend
-        run: npm ci
+        run: npm install
 
       - name: Build Frontend
         working-directory: ./frontend
@@ -115,8 +114,8 @@ jobs:
 
       - name: Install & Build Services
         run: |
-          cd order-service && npm ci && npm run build &
-          cd inventory-service && npm ci && npm run build &
+          cd order-service && npm install && npm run build &
+          cd inventory-service && npm install && npm run build &
           wait
 
       - name: Start Inventory Service
