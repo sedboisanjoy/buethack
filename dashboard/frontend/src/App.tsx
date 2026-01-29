@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 interface ServiceStatus {
   status: 'healthy' | 'unhealthy' | 'unknown';
@@ -24,6 +24,10 @@ interface ChaosStatus {
   schrödingerEnabled: boolean;
 }
 
+// Rolling window alert threshold
+const ALERT_THRESHOLD_MS = 1000; // 1 second
+const ROLLING_WINDOW_MS = 30000; // 30 seconds
+
 function App() {
   const [connected, setConnected] = useState(false);
   const [services, setServices] = useState<Record<string, ServiceStatus>>({
@@ -36,8 +40,41 @@ function App() {
     gremlinEnabled: false,
     schrödingerEnabled: false,
   });
+  const [currentTime, setCurrentTime] = useState(Date.now());
   
   const wsRef = useRef<WebSocket | null>(null);
+
+  // Calculate rolling 30-second average response time
+  const rollingAverage = useMemo(() => {
+    const now = currentTime;
+    const windowStart = now - ROLLING_WINDOW_MS;
+    
+    const recentResponses = responseTimes.filter((rt) => {
+      const rtTime = new Date(rt.timestamp).getTime();
+      return rtTime >= windowStart && rtTime <= now;
+    });
+    
+    if (recentResponses.length === 0) {
+      return { average: 0, count: 0, isAlert: false };
+    }
+    
+    const total = recentResponses.reduce((sum, rt) => sum + rt.durationMs, 0);
+    const average = total / recentResponses.length;
+    
+    return {
+      average: Math.round(average),
+      count: recentResponses.length,
+      isAlert: average > ALERT_THRESHOLD_MS,
+    };
+  }, [responseTimes, currentTime]);
+
+  // Update current time every second for rolling window calculation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const connectWebSocket = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -217,6 +254,27 @@ function App() {
       </header>
 
       <div className="grid">
+        {/* Rolling 30s Alert Banner */}
+        <div className={`alert-banner ${rollingAverage.isAlert ? 'alert' : 'ok'}`}>
+          <div className="alert-indicator">
+            <span className={`alert-light ${rollingAverage.isAlert ? 'red' : 'green'}`} />
+            <span className="alert-label">
+              {rollingAverage.isAlert ? '⚠️ HIGH LATENCY ALERT' : '✓ System Normal'}
+            </span>
+          </div>
+          <div className="alert-stats">
+            <span className="alert-avg">
+              Avg: <strong>{rollingAverage.average}ms</strong>
+            </span>
+            <span className="alert-window">
+              ({rollingAverage.count} requests in last 30s)
+            </span>
+            <span className="alert-threshold">
+              Threshold: {ALERT_THRESHOLD_MS}ms
+            </span>
+          </div>
+        </div>
+
         {/* Services Health */}
         <div className="card">
           <h2>Services Health</h2>
