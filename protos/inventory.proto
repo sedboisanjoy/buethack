@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package inventory;
+
+// The inventory service definition.
+service Inventory {
+  // Adjusts stock for an item
+  rpc AdjustStock (StockAdjustmentRequest) returns (StockAdjustmentResponse);
+}
+
+// The request message containing the item's ID and quantity to adjust.
+message StockAdjustmentRequest {
+  string itemId = 1;
+  int32 quantity = 2;
+}
+
+// The response message confirming the stock adjustment.
+message StockAdjustmentResponse {
+  string transactionId = 1;
+  bool success = 2;
+}
